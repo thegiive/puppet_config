@@ -83,7 +83,7 @@ require mysql
 	}
 }
 
-node ip-10-146-1-184 , ip-10-120-13-177 {
+node ip-10-146-27-100 { 
 	include apache 
 		include php 
 class {'mysql':
