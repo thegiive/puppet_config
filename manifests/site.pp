@@ -49,20 +49,31 @@ class mysql($user , $mysql_password , $name){
 		       require => Exec["set-mysql-password"],
 	}
 
-	file { "/tmp/a.sql":
+	file { "/tmp/drupal.sql":
 		owner => "mysql", group => "mysql",
-		      source => "puppet:///mysql/a.sql",
+		      source => "puppet:///mysql/drupal.sql",
 		       require => Exec["create-myapp-db"],
 	}
 
 	exec { "import-db" : 
-		command => "/usr/bin/mysql myapp -u$user -p$mysql_password < /tmp/a.sql" , 
-		       require => File["/tmp/a.sql"], 
+		command => "/usr/bin/mysql $name -u$user -p$mysql_password < /tmp/drupal.sql" , 
+		       require => File["/tmp/drupal.sql"], 
 	}
 
-	notify {'other title':
-		message => $mysql_password,
-	}
+#	file { "/tmp/a.sql":
+#		owner => "mysql", group => "mysql",
+#		      source => "puppet:///mysql/a.sql",
+#		       require => Exec["create-myapp-db"],
+#	}
+#
+#	exec { "import-db" : 
+#		command => "/usr/bin/mysql myapp -u$user -p$mysql_password < /tmp/a.sql" , 
+#		       require => File["/tmp/a.sql"], 
+#	}
+#
+#	notify {'other title':
+#		message => $mysql_password,
+#	}
 }
 
 class phpmyadmin{
@@ -94,6 +105,25 @@ class {'mysql':
 		include phpmyadmin 
 
 }
+
+node ip-10-132-77-20 {
+	package{ 'drupal7' :
+		ensure => installed , 
+	}
+	exec { "copy drupla config" : 
+		command => '/bin/cp /etc/drupal/7/apache2.conf /etc/apache2/mods-enabled/drupal.conf',
+	}
+	class {'mysql':
+		user  => 'root',
+		      mysql_password => 'lala123' , 
+		      name => 'drupal7' , 
+	}
+	exec { "reload-apache2":
+		command => "/etc/init.d/apache2 reload",
+	}
+
+}
+
 node default{
 	exec { "rm config":
 		command => "rm  /etc/apache2/conf.d/apache.conf",
