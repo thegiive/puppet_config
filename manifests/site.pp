@@ -10,10 +10,10 @@ class apache{
 	}
 }
 class php{
-require apache
-	package{ 'php5' :
-		ensure => installed
-	}
+	require apache
+		package{ 'php5' :
+			ensure => installed
+		}
 	package{ 'libapache2-mod-php5' :
 		ensure => installed
 	}
@@ -37,12 +37,12 @@ class mysql($user , $mysql_password , $name){
 
 
 
-		exec { "set-mysql-password":
-			unless => "mysqladmin -u$user -p$mysql_password status",
-			       path => ["/bin", "/usr/bin"],
-			       command => "mysqladmin -u$user password $mysql_password",
-			       require => Service["mysql"],
-		}
+	exec { "set-mysql-password":
+		unless => "mysqladmin -u$user -p$mysql_password status",
+		       path => ["/bin", "/usr/bin"],
+		       command => "mysqladmin -u$user password $mysql_password",
+		       require => Service["mysql"],
+	}
 	exec { "create-myapp-db":
 		unless => "/usr/bin/mysql -u$user -p$mysql_password ${name}",
 		       command => "/usr/bin/mysql -u$user -p$mysql_password -e \"create database $name; grant all on $name.* to $user@localhost identified by '$mysql_password';\"",
@@ -52,84 +52,71 @@ class mysql($user , $mysql_password , $name){
 	file { "/tmp/drupal.sql":
 		owner => "mysql", group => "mysql",
 		      source => "puppet:///mysql/drupal.sql",
-		       require => Exec["create-myapp-db"],
+		      require => Exec["create-myapp-db"],
 	}
 
 	exec { "import-db" : 
 		command => "/usr/bin/mysql $name -u$user -p$mysql_password < /tmp/drupal.sql" , 
-		       require => File["/tmp/drupal.sql"], 
+			require => File["/tmp/drupal.sql"], 
 	}
 
-#	file { "/tmp/a.sql":
-#		owner => "mysql", group => "mysql",
-#		      source => "puppet:///mysql/a.sql",
-#		       require => Exec["create-myapp-db"],
-#	}
-#
-#	exec { "import-db" : 
-#		command => "/usr/bin/mysql myapp -u$user -p$mysql_password < /tmp/a.sql" , 
-#		       require => File["/tmp/a.sql"], 
-#	}
-#
-#	notify {'other title':
-#		message => $mysql_password,
-#	}
 }
 
 class phpmyadmin{
-require php 
-require mysql 
-	package{ 'phpmyadmin' :
-		ensure => installed , 
-		
-	}
+	require php 
+		require mysql 
+		package{ 'phpmyadmin' :
+			ensure => installed , 
+
+		}
 	exec { "copy config":
 		command => "cp /etc/phpmyadmin/apache.conf /etc/apache2/conf.d",
 			path    => "/usr/local/bin/:/bin/",
-		       require => Package["phpmyadmin"], 
+			require => Package["phpmyadmin"], 
 	}
 	exec { "reload-apache2":
 		command => "/etc/init.d/apache2 reload",
-		       require => Exec["copy config"], 
+			require => Exec["copy config"], 
 	}
 }
 
-node ip-10-146-27-100 { 
-	include apache 
-		include php 
-class {'mysql':
-      user  => 'root',
-      mysql_password => 'lala123' , 
-      name => 'myapp' , 
-    }
-		include phpmyadmin 
 
-}
-
-node ip-10-132-77-20 {
-	package{ 'drupal7' :
-		ensure => installed , 
-	}
+class drupal{
+	require php 
+		require mysql 
+		package{ 'drupal7' :
+			ensure => installed , 
+		}
 	exec { "copy drupla config" : 
 		command => '/bin/cp /etc/drupal/7/apache2.conf /etc/apache2/mods-enabled/drupal.conf',
+			require => Package['drupal7'] 
 	}
-	class {'mysql':
-		user  => 'root',
-		      mysql_password => 'lala123' , 
-		      name => 'drupal7' , 
-	}
-	exec { "reload-apache2":
+	exec { "reload-apache":
 		command => "/etc/init.d/apache2 reload",
+			require => Exec['copy drupla config'] 
 	}
+}
+
+node default { 
+	$mysql_user = 'root'
+		$mysql_password = 'lala123'
+		$mysql_host = 'localhost'
+		$drupal_db = 'drupal7'
+		include apache 
+		include php 
+		class {'mysql':
+			user  => $mysql_user, 
+			      mysql_password => $mysql_password , 
+			      name => $drupal_db , 
+		}
+	include phpmyadmin 
+		include drupal
+		file{ "dbconfig.php" :
+			path => "/usr/share/drupal7/sites/default/dbconfig.php",
+			     require => Class['drupal'] , 
+			     content => template("mysql/dbconfig.php.erb"),
+		}
+
 
 }
 
-node default{
-	exec { "rm config":
-		command => "rm  /etc/apache2/conf.d/apache.conf",
-			path    => "/usr/local/bin/:/bin/",
-	}
-	exec { "reload-apache2":
-		command => "/etc/init.d/apache2 reload",
-	}
-}
