@@ -83,7 +83,7 @@ require mysql
 	}
 }
 
-node ip-10-146-27-100 { 
+node default{
 	include apache 
 		include php 
 class {'mysql':
@@ -93,13 +93,4 @@ class {'mysql':
     }
 		include phpmyadmin 
 
-}
-node default{
-	exec { "rm config":
-		command => "rm  /etc/apache2/conf.d/apache.conf",
-			path    => "/usr/local/bin/:/bin/",
-	}
-	exec { "reload-apache2":
-		command => "/etc/init.d/apache2 reload",
-	}
 }
