@@ -37,28 +37,28 @@ class mysql($user , $mysql_password , $name){
 
 
 
-	exec { "set-mysql-password":
-		unless => "mysqladmin -u$user -p$mysql_password status",
-		       path => ["/bin", "/usr/bin"],
-		       command => "mysqladmin -u$user password $mysql_password",
-		       require => Service["mysql"],
-	}
-	exec { "create-myapp-db":
-		unless => "/usr/bin/mysql -u$user -p$mysql_password ${name}",
-		       command => "/usr/bin/mysql -u$user -p$mysql_password -e \"create database $name; grant all on $name.* to $user@localhost identified by '$mysql_password';\"",
-		       require => Exec["set-mysql-password"],
-	}
+	#exec { "set-mysql-password":
+	#	unless => "mysqladmin -u$user -p$mysql_password status",
+	#	       path => ["/bin", "/usr/bin"],
+	#	       command => "mysqladmin -u$user password $mysql_password",
+	#	       require => Service["mysql"],
+	#}
+	#exec { "create-myapp-db":
+	#	unless => "/usr/bin/mysql -u$user -p$mysql_password ${name}",
+	#	       command => "/usr/bin/mysql -u$user -p$mysql_password -e \"create database $name; grant all on $name.* to $user@localhost identified by '$mysql_password';\"",
+	#	       require => Exec["set-mysql-password"],
+	#}
 
-	file { "/tmp/drupal.sql":
-		owner => "mysql", group => "mysql",
-		      source => "puppet:///mysql/drupal.sql",
-		      require => Exec["create-myapp-db"],
-	}
+	#file { "/tmp/drupal.sql":
+	#	owner => "mysql", group => "mysql",
+	#	      source => "puppet:///mysql/drupal2.sql",
+	#	      require => Exec["create-myapp-db"],
+	#}
 
-	exec { "import-db" : 
-		command => "/usr/bin/mysql $name -u$user -p$mysql_password < /tmp/drupal.sql" , 
-			require => File["/tmp/drupal.sql"], 
-	}
+	#exec { "import-db" : 
+	#	command => "/usr/bin/mysql $name -u$user -p$mysql_password < /tmp/drupal.sql" , 
+	#		require => File["/tmp/drupal.sql"], 
+	#}
 
 }
 
@@ -116,6 +116,22 @@ node default {
 			     require => Class['drupal'] , 
 			     content => template("mysql/dbconfig.php.erb"),
 		}
+
+	exec { "rm sql tmp file" : 
+		command => "/bin/rm /tmp/drupal.sql" ,
+		onlyif => "/usr/bin/test -f /tmp/drupal.sql" , 
+	}
+	file { "/tmp/drupal.sql":
+		owner => "mysql", group => "mysql",
+		      source => "puppet:///mysql/drupal.sql",
+			require => Exec["rm sql tmp file"] , 
+	}
+
+	exec { "import-db" : 
+		command => "/usr/bin/mysql $drupal_db -u$mysql_user -p$mysql_password < /tmp/drupal.sql" , 
+			require => File["/tmp/drupal.sql"], 
+	}
+
 
 
 }
