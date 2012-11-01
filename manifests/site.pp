@@ -123,7 +123,7 @@ node default {
 	}
 	file { "/tmp/drupal.sql":
 		owner => "mysql", group => "mysql",
-		      source => "puppet:///mysql/drupal2.sql",
+		      source => "puppet:///mysql/drupal3.sql",
 			require => Exec["rm sql tmp file"] , 
 	}
 
