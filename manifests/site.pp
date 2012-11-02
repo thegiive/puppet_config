@@ -97,7 +97,7 @@ class drupal{
 	}
 }
 
-node default { 
+node drupal_node { 
 	$mysql_user = 'root'
 		$mysql_password = 'lala123'
 		$mysql_host = 'localhost'
@@ -135,4 +135,33 @@ node default {
 
 
 }
+class haproxy( $haproxy_ip , $server_id_array ){
+	package{ 'haproxy' :
+		ensure => installed
+	}
+	file{ "haproxy.cfg" :
+		path => "/etc/haproxy/haproxy.cfg" , 
+		     require => Package['haproxy'] , 
+		     content => template("mysql/haproxy.cfg.erb"),
+	}
+	file { "/etc/default/haproxy" : 
+		content => 'ENABLED=1' ,
+			require => Package['haproxy'] , 
+	}
+	service{ 'haproxy' : 
+		name => 'haproxy' , 
+		     ensure => running,
+		     enable => true,
+		     require => File["/etc/default/haproxy"] , 
+	}
+}
 
+node default{
+	$haproxy_ip = '10.120.12.11'
+	$server_id_array = [ '10.161.7.26' , '10.161.7.25' ] 
+	class {'haproxy':
+		haproxy_ip  => $haproxy_ip, 
+		      server_id_array => $server_id_array , 
+	} 
+
+}
