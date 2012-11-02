@@ -29,25 +29,32 @@ class mysql($user , $mysql_password , $name){
 		ensure => installed
 	}
 
+
+
+	exec { "set-mysql-password":
+		unless => "mysqladmin -u$user -p$mysql_password status",
+		       path => ["/bin", "/usr/bin"],
+		       command => "mysqladmin -u$user password $mysql_password",
+		       require => Service["mysql"],
+	}
+	exec { "create-myapp-db":
+		unless => "/usr/bin/mysql -u$user -p$mysql_password ${name}",
+		       command => "/usr/bin/mysql -u$user -p$mysql_password -e \"create database $name; grant all on $name.* to $user@localhost identified by '$mysql_password';\"",
+		       require => Exec["set-mysql-password"],
+	}
+
+	file { "/etc/mysql/my.cnf" :
+		source => "puppet:///mysql/my.cnf",
+		require => Package['mysql-server'] ,
+	}
+
 	service { "mysql":
 		enable => true,
 		       ensure => running,
-		       require => Package["mysql-server"],
+		       require => File["/etc/mysql/my.cnf"],
 	}
+	
 
-
-
-	#exec { "set-mysql-password":
-	#	unless => "mysqladmin -u$user -p$mysql_password status",
-	#	       path => ["/bin", "/usr/bin"],
-	#	       command => "mysqladmin -u$user password $mysql_password",
-	#	       require => Service["mysql"],
-	#}
-	#exec { "create-myapp-db":
-	#	unless => "/usr/bin/mysql -u$user -p$mysql_password ${name}",
-	#	       command => "/usr/bin/mysql -u$user -p$mysql_password -e \"create database $name; grant all on $name.* to $user@localhost identified by '$mysql_password';\"",
-	#	       require => Exec["set-mysql-password"],
-	#}
 
 	#file { "/tmp/drupal.sql":
 	#	owner => "mysql", group => "mysql",
@@ -81,15 +88,19 @@ class phpmyadmin{
 }
 
 
-class drupal{
+class drupal( $mysql_user , $mysql_password , $mysql_host , $drupal_db ) {
 	require php 
-		require mysql 
+	#	require mysql 
 		package{ 'drupal7' :
 			ensure => installed , 
 		}
 	exec { "copy drupla config" : 
 		command => '/bin/cp /etc/drupal/7/apache2.conf /etc/apache2/mods-enabled/drupal.conf',
 			require => Package['drupal7'] 
+	}
+	file{ "dbconfig.php" :
+		path => "/usr/share/drupal7/sites/default/dbconfig.php",
+		     content => template("mysql/dbconfig.php.erb"),
 	}
 	exec { "reload-apache":
 		command => "/etc/init.d/apache2 reload",
@@ -156,12 +167,60 @@ class haproxy( $haproxy_ip , $server_id_array ){
 	}
 }
 
-node default{
-	$haproxy_ip = '10.120.12.11'
-	$server_id_array = [ '10.161.7.26' , '10.161.7.25' ] 
+node ip-10-150-189-15{
+	$haproxy_ip = '10.150.189.15'
+	$server_id_array = [ '10.152.87.92' , '10.161.7.25' ] 
 	class {'haproxy':
 		haproxy_ip  => $haproxy_ip, 
 		      server_id_array => $server_id_array , 
 	} 
+
+}
+
+node ip-10-152-87-92{
+	# drupal node
+	$mysql_user = 'root'
+		$mysql_password = 'lala123'
+		$mysql_host = '10.152.11.127'
+		$drupal_db = 'drupal7'
+	class { 'drupal' : 
+		mysql_user => $mysql_user , 
+		mysql_password => $mysql_password , 
+		mysql_host => $mysql_host , 
+		drupal_db => $drupal_db , 
+	}
+		
+}
+
+node ip-10-152-11-127{
+	#db 
+	$mysql_user = 'root'
+		$mysql_password = 'lala123'
+		$mysql_host = 'localhost'
+		$drupal_db = 'drupal7'
+		include apache 
+		include php 
+		class {'mysql':
+			user  => $mysql_user, 
+			      mysql_password => $mysql_password , 
+			      name => $drupal_db , 
+		}
+	include phpmyadmin 
+
+	exec { "rm sql tmp file" : 
+		command => "/bin/rm /tmp/drupal.sql" ,
+		onlyif => "/usr/bin/test -f /tmp/drupal.sql" , 
+		require => Class['phpmyadmin'] 
+	}
+	file { "/tmp/drupal.sql":
+		owner => "mysql", group => "mysql",
+		      source => "puppet:///mysql/drupal4.sql",
+			require => Exec["rm sql tmp file"] , 
+	}
+
+	exec { "import-db" : 
+		command => "/usr/bin/mysql $drupal_db -u$mysql_user -p$mysql_password < /tmp/drupal.sql" , 
+			require => File["/tmp/drupal.sql"], 
+	}
 
 }
