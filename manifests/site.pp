@@ -165,11 +165,18 @@ class haproxy( $haproxy_ip , $server_id_array ){
 		     enable => true,
 		     require => File["/etc/default/haproxy"] , 
 	}
+	
+	exec{ 'haproxy-reload' : 
+		command => "/etc/init.d/haproxy reload"  , 
+			require => File["haproxy.cfg"],
+
+	}
 }
 
 node ip-10-150-189-15{
+	#haproxy
 	$haproxy_ip = '10.150.189.15'
-	$server_id_array = [ '10.152.87.92' , '10.161.7.25' ] 
+	$server_id_array = [ '10.152.87.92' , '10.160.61.48' ] 
 	class {'haproxy':
 		haproxy_ip  => $haproxy_ip, 
 		      server_id_array => $server_id_array , 
@@ -177,7 +184,7 @@ node ip-10-150-189-15{
 
 }
 
-node ip-10-152-87-92{
+node ip-10-152-87-92,ip-10-160-61-48{
 	# drupal node
 	$mysql_user = 'root'
 		$mysql_password = 'lala123'
