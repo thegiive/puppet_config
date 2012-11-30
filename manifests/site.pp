@@ -65,6 +65,45 @@ class mysql($user , $mysql_password , $name){
 	}
 }
 
+class ruby{
+	package{ 'ruby1.9.3' : 
+		ensure => installed , 
+	}
+	package{ 'rubygems' :
+		ensure => installed , 
+		       require => Package["ruby1.9.3"],
+	}
+	package { 
+		'rails' : 
+			     provider => 'gem',
+		       require => Package["rubygems"],
+	}
+
+	package { 'libmysqlclient-dev' :
+		ensure => installed , 
+		       require => Package["ruby1.9.3"],
+	}	
+	package { 'libmysql-ruby' :
+		ensure => installed , 
+		       require => Package["ruby1.9.3"],
+	}	
+	package { 'libsqlite3-dev' :
+		ensure => installed , 
+		       require => Package["ruby1.9.3"],
+	}	
+	package { 'build-essential' :
+		ensure => installed , 
+		       require => Package["ruby1.9.3"],
+	}	
+	package { 'nodejs' :
+		ensure => installed , 
+		       require => Package["ruby1.9.3"],
+	}	
+
+
+
+}
+
 class phpmyadmin{
 require php 
 require mysql 
@@ -86,11 +125,12 @@ require mysql
 node default{
 	include apache 
 		include php 
-class {'mysql':
-      user  => 'root',
-      mysql_password => 'lala123' , 
-      name => 'myapp' , 
-    }
-		include phpmyadmin 
-
+	include ruby 
+#class {'mysql':
+#      user  => 'root',
+#      mysql_password => 'lala123' , 
+#      name => 'myapp' , 
+#    }
+#		include phpmyadmin 
+#
 }
