@@ -79,6 +79,22 @@ class ruby{
 		       require => Package["rubygems"],
 	}
 
+	package { 
+		'activerecord-mysql2-adapter' : 
+			     provider => 'gem',
+		       require => Package["rubygems"],
+	}
+	package { 
+		'thin' : 
+			     provider => 'gem',
+		       require => Package["rubygems"],
+	}
+	package { 
+		'dpkg-tools' : 
+			     provider => 'gem',
+		       require => Package["rubygems"],
+	}
+
 	package { 'libmysqlclient-dev' :
 		ensure => installed , 
 		       require => Package["ruby1.9.3"],
@@ -99,6 +115,25 @@ class ruby{
 		ensure => installed , 
 		       require => Package["ruby1.9.3"],
 	}	
+ file { "/tmp/abc_1.0.1-1_amd64.deb":
+    owner   => root,
+    group   => root,
+    mode    => 644,
+    ensure  => present,
+    source  => "puppet:///mysql/abc_1.0.1-1_amd64.deb"
+  }
+
+  package { "abc":
+    provider => dpkg,
+    ensure => installed,
+    source => "/tmp/abc_1.0.1-1_amd64.deb"
+  }
+
+
+	exec { "Start Thin":
+		command => "/usr/local/bin/thin --chdir /usr/src/ start -d" , 
+		       require => Package["abc"], 
+	}
 
 
 
@@ -123,8 +158,8 @@ require mysql
 }
 
 node default{
-	include apache 
-		include php 
+#	include apache 
+#		include php 
 	include ruby 
 #class {'mysql':
 #      user  => 'root',
