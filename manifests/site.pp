@@ -115,24 +115,30 @@ class ruby{
 		ensure => installed , 
 		       require => Package["ruby1.9.3"],
 	}	
- file { "/tmp/abc_1.0.1-1_amd64.deb":
-    owner   => root,
-    group   => root,
-    mode    => 644,
-    ensure  => present,
-    source  => "puppet:///mysql/abc_1.0.1-1_amd64.deb"
-  }
+	
+	package{ 'abc' : 
+		ensure => '1.0.4.1-1' , 
+	}
+ #file { "/tmp/abc_1.0.2-1_amd64.deb":
+ #   owner   => root,
+ #   group   => root,
+ #   mode    => 644,
+ #   ensure  => present,
+ #   source  => "puppet:///mysql/abc_1.0.2-1_amd64.deb"
+ # }
 
-  package { "abc":
-    provider => dpkg,
-    ensure => installed,
-    source => "/tmp/abc_1.0.1-1_amd64.deb"
-  }
+ # package { "abc":
+ #   provider => dpkg,
+ #   ensure => "1.0.2-1" , 
+ #   source => "/tmp/abc_1.0.2-1_amd64.deb"
+ # }
 
 
 	exec { "Start Thin":
-		command => "/usr/local/bin/thin --chdir /usr/src/ start -d" , 
+		command => "/usr/local/bin/thin --chdir /usr/src/ restart --pid /usr/src/tmp/pids/thin.pid -e development -d" , 
+			       path => ["/bin", "/usr/bin"],
 		       require => Package["abc"], 
+	#	unless => "ps -ef | grep thin | grep -v grep" , 
 	}
 
 
