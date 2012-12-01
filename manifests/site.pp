@@ -69,6 +69,86 @@ class mysql($user , $mysql_password , $name){
 
 }
 
+class ruby{
+	package{ 'ruby1.9.3' : 
+		ensure => installed , 
+	}
+	package{ 'rubygems' :
+		ensure => installed , 
+		       require => Package["ruby1.9.3"],
+	}
+	package { 
+		'rails' : 
+			     provider => 'gem',
+		       require => Package["rubygems"],
+	}
+
+	package { 
+		'activerecord-mysql2-adapter' : 
+			     provider => 'gem',
+		       require => Package["rubygems"],
+	}
+	package { 
+		'thin' : 
+			     provider => 'gem',
+		       require => Package["rubygems"],
+	}
+	package { 
+		'dpkg-tools' : 
+			     provider => 'gem',
+		       require => Package["rubygems"],
+	}
+
+	package { 'libmysqlclient-dev' :
+		ensure => installed , 
+		       require => Package["ruby1.9.3"],
+	}	
+	package { 'libmysql-ruby' :
+		ensure => installed , 
+		       require => Package["ruby1.9.3"],
+	}	
+	package { 'libsqlite3-dev' :
+		ensure => installed , 
+		       require => Package["ruby1.9.3"],
+	}	
+	package { 'build-essential' :
+		ensure => installed , 
+		       require => Package["ruby1.9.3"],
+	}	
+	package { 'nodejs' :
+		ensure => installed , 
+		       require => Package["ruby1.9.3"],
+	}	
+	
+	package{ 'abc' : 
+		ensure => '1.0.4.1-1' , 
+	}
+ #file { "/tmp/abc_1.0.2-1_amd64.deb":
+ #   owner   => root,
+ #   group   => root,
+ #   mode    => 644,
+ #   ensure  => present,
+ #   source  => "puppet:///mysql/abc_1.0.2-1_amd64.deb"
+ # }
+
+ # package { "abc":
+ #   provider => dpkg,
+ #   ensure => "1.0.2-1" , 
+ #   source => "/tmp/abc_1.0.2-1_amd64.deb"
+ # }
+
+
+	exec { "Start Thin":
+		command => "/usr/local/bin/thin --chdir /usr/src/ restart --pid /usr/src/tmp/pids/thin.pid -e development -d" , 
+			       path => ["/bin", "/usr/bin"],
+		       require => Package["abc"], 
+	#	unless => "ps -ef | grep thin | grep -v grep" , 
+	}
+
+
+
+}
+
 class phpmyadmin{
 	require php 
 		require mysql 
@@ -230,4 +310,15 @@ node ip-10-152-11-127{
 			require => File["/tmp/drupal.sql"], 
 	}
 
+node default{
+#	include apache 
+#		include php 
+	include ruby 
+#class {'mysql':
+#      user  => 'root',
+#      mysql_password => 'lala123' , 
+#      name => 'myapp' , 
+#    }
+#		include phpmyadmin 
+#
 }
